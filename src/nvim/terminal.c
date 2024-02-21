@@ -343,6 +343,14 @@ void terminal_open(Terminal **termpp, buf_T *buf, TerminalOptions opts)
   refresh_screen(term, buf);
   set_option_value(kOptBuftype, STATIC_CSTR_AS_OPTVAL("terminal"), OPT_LOCAL);
 
+  // Default settings for terminal buffers
+  buf->b_p_ma = false;     // 'nomodifiable'
+  buf->b_p_ul = -1;        // 'undolevels'
+  buf->b_p_scbk =          // 'scrollback' (initialize local from global)
+                  (p_scbk < 0) ? 10000 : MAX(0, p_scbk);
+  buf->b_p_tw = 0;         // 'textwidth'
+  set_option_value(kOptWrap, BOOLEAN_OPTVAL(false), OPT_LOCAL);
+  set_option_value(kOptList, BOOLEAN_OPTVAL(false), OPT_LOCAL);
   if (buf->b_ffname != NULL) {
     buf_set_term_title(buf, buf->b_ffname, strlen(buf->b_ffname));
   }
@@ -362,7 +370,7 @@ void terminal_open(Terminal **termpp, buf_T *buf, TerminalOptions opts)
 
   if (term->sb_buffer == NULL) {
     // Local 'scrollback' _after_ autocmds.
-    if (buf->b_p_scbk < 1) {
+    if (buf->b_p_scbk < 0) {
       buf->b_p_scbk = SB_MAX;
     }
     // Configure the scrollback buffer.
@@ -1830,7 +1838,7 @@ void on_scrollback_option_changed(Terminal *term)
 /// Adjusts scrollback storage and the terminal buffer scrollback lines
 static void adjust_scrollback(Terminal *term, buf_T *buf)
 {
-  if (buf->b_p_scbk < 1) {  // Local 'scrollback' was set to -1.
+  if (buf->b_p_scbk < 0) {  // Local 'scrollback' was set to -1.
     buf->b_p_scbk = SB_MAX;
   }
   const size_t scbk = (size_t)buf->b_p_scbk;
