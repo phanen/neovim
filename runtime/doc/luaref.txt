@@ -1262,6 +1262,7 @@ The indexing access `table[key]`.
          if type(h) == "function" then
            return h(table, key)      -- call the handler
          else return h[key]          -- or repeat operation on it
+         end
        end
 <
 "newindex":                                                       *__newindex()*
@@ -1284,6 +1285,7 @@ The indexing assignment `table[key] = value`.
          if type(h) == "function" then
            return h(table, key,value)    -- call the handler
          else h[key] = value             -- or repeat operation on it
+         end
        end
 <
 "call":                                                               *__call()*
