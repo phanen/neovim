@@ -1262,6 +1262,7 @@ The indexing access `table[key]`.
          if type(h) == "function" then
            return h(table, key)      -- call the handler
          else return h[key]          -- or repeat operation on it
+         end
        end
 <
 "newindex":                                                       *__newindex()*
@@ -1284,11 +1285,30 @@ The indexing assignment `table[key] = value`.
          if type(h) == "function" then
            return h(table, key,value)    -- call the handler
          else h[key] = value             -- or repeat operation on it
+         end
        end
 <
 "call":                                                               *__call()*
 -------
 called when Lua calls a value.
+       function gettable_event (table, key)
+         local h
+         if type(table) == "table" then
+           local v = rawget(table, key)
+           if v ~= nil then return v end
+           h = metatable(table).__index
+           if h == nil then return nil end
+         else
+           h = metatable(table).__index
+           if h == nil then
+             error(...);
+           end
+         end
+         if type(h) == "function" then
+           return h(table, key)      -- call the handler
+         else return h[key]          -- or repeat operation on it
+         end
+       end
 >lua
        function function_event (func, ...)
          if type(func) == "function" then
