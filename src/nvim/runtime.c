@@ -1656,10 +1656,10 @@ char *get_lib_dir(void)
 {
   // TODO(bfredl): too fragile? Ideally default_lib_dir would be made empty
   // in an appimage build
-  if (strlen(default_lib_dir) != 0
-      && os_isdir(default_lib_dir)) {
-    return xstrdup(default_lib_dir);
-  }
+  // if (strlen(default_lib_dir) != 0
+  //     && os_isdir(default_lib_dir)) {
+  //   return xstrdup(default_lib_dir);
+  // }
 
   // Find library path relative to the nvim binary: ../lib/nvim/
   char exe_name[MAXPATHL];
