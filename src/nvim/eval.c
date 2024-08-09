@@ -7959,7 +7959,8 @@ void ex_execute(exarg_T *eap)
   if (ret != FAIL && ga.ga_data != NULL) {
     if (eap->cmdidx == CMD_echomsg) {
       msg_ext_set_kind("echomsg");
-      msg(ga.ga_data, echo_attr);
+      // msg(ga.ga_data, echo_attr);
+      msg_attr_keep(ga.ga_data, echo_attr, false, true);
     } else if (eap->cmdidx == CMD_echoerr) {
       // We don't want to abort following commands, restore did_emsg.
       int save_did_emsg = did_emsg;
