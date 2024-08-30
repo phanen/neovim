@@ -4471,6 +4471,9 @@ static int open_cmdwin(void)
     }
     set_option_value_give_err(kOptFiletype, STATIC_CSTR_AS_OPTVAL("vim"), OPT_LOCAL);
   }
+  if (histtype == HIST_CMD || histtype == HIST_SEARCH) {
+    add_map("q", "<Cmd>q!<CR>", MODE_NORMAL, true);
+  }
   curbuf->b_ro_locked--;
 
   // Reset 'textwidth' after setting 'filetype' (the Vim filetype plugin
