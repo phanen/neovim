@@ -97,7 +97,7 @@ void change_warning(buf_T *buf, int col)
     msg_end();
     if (msg_silent == 0 && !silent_mode && ui_active()) {
       ui_flush();
-      os_delay(1002, true);  // give the user time to think about it
+      // os_delay(1002, true);  // give the user time to think about it
     }
     buf->b_did_warn = true;
     redraw_cmdline = false;  // don't redraw and erase the message
