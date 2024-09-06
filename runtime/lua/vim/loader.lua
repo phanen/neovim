@@ -48,7 +48,7 @@ local M = {}
 --- @alias vim.loader.Stats table<string, {total:number, time:number, [string]:number?}?>
 
 --- @private
-M.path = vim.fn.stdpath('cache') .. '/luac'
+M.path = vim.fn.stdpath('run') .. '/luac'
 
 --- @private
 M.enabled = false
@@ -522,5 +522,7 @@ function M._inspect(opts)
   end
   return stats
 end
+
+M._loader = Loader
 
 return M
