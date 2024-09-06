@@ -999,7 +999,8 @@ function M.show_document(location, offset_encoding, opts)
     or create_window_without_focus()
 
   vim.bo[bufnr].buflisted = true
-  api.nvim_win_set_buf(win, bufnr)
+  -- api.nvim_win_set_buf(win, bufnr)
+  vim._with({ win = win }, function() vim.cmd.edit(api.nvim_buf_get_name(bufnr)) end)
   if focus then
     api.nvim_set_current_win(win)
   end
