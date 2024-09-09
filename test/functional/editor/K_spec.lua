@@ -44,7 +44,7 @@ describe('K', function()
   end)
 
   it("<esc> kills the buffer for a running 'keywordprg' command", function()
-    n.source('set keywordprg=less')
+    n.source('set keywordprg=LESS=\\ less')
     eval('writefile(["hello", "world"], "' .. test_file .. '")')
     feed('i' .. test_file .. '<esc>K')
     eq('t', eval('mode()'))
