@@ -3275,9 +3275,9 @@ static void vim_mktempdir(void)
     // Expand environment variables, leave room for "/tmp/nvim.<user>/XXXXXX/999999999".
     expand_env((char *)temp_dirs[i], tmp, TEMP_FILE_PATH_MAXLEN - 64);
     if (!os_isdir(tmp)) {
-      if (strequal("$TMPDIR", temp_dirs[i])) {
-        WLOG("$TMPDIR tempdir not a directory (or does not exist): %s", tmp);
-      }
+      // if (strequal("$TMPDIR", temp_dirs[i])) {
+      //   WLOG("$TMPDIR tempdir not a directory (or does not exist): %s", tmp);
+      // }
       continue;
     }
 
