@@ -1693,6 +1693,7 @@ function M.txt(_, bufnr)
   if not getline(bufnr, -1):find('vim:.*ft=help') then
     return 'text'
   end
+  return 'help'
 end
 
 --- @type vim.filetype.mapfn
