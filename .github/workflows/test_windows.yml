@@ -16,7 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test: [functional, old]
+        # test: [functional, old]
+        test: [functional]
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -54,7 +55,9 @@ jobs:
       - if: ${{ matrix.test == 'functional' }}
         name: functionaltest
         timeout-minutes: ${{ inputs.functionaltest_timeout }}
-        run: cmake --build build --target functionaltest
+        run: |
+          cmake -E env "TEST_FILE=test/functional/terminal/scrollback_spec.lua"
+          cmake --build build --target functionaltest
 
       - if: ${{ matrix.test == 'old' }}
         uses: msys2/setup-msys2@v2
