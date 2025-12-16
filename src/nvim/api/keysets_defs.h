@@ -391,6 +391,7 @@ typedef struct {
   OptionalKeys is_set__open_term_;
   LuaRefOf(("input" _, Integer term, Integer bufnr, any data)) on_input;
   Boolean force_crlf;
+  Object pty;
 } Dict(open_term);
 
 typedef struct {

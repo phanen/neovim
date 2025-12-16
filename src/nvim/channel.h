@@ -69,6 +69,7 @@ static inline Stream *channel_instream(Channel *chan)
 {
   switch (chan->streamtype) {
   case kChannelStreamProc:
+  case kChannelStreamPty:
     return &chan->stream.proc.in;
 
   case kChannelStreamSocket:
@@ -89,6 +90,7 @@ static inline RStream *channel_outstream(Channel *chan)
 {
   switch (chan->streamtype) {
   case kChannelStreamProc:
+  case kChannelStreamPty:
     return &chan->stream.proc.out;
 
   case kChannelStreamSocket:

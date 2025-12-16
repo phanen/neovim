@@ -14,6 +14,7 @@ typedef enum {
   kChannelStreamStdio,
   kChannelStreamStderr,
   kChannelStreamInternal,
+  kChannelStreamPty,  ///< only for raw pty, use Proc for process within pty
 } ChannelStreamType;
 
 typedef enum {

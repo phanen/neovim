@@ -75,7 +75,7 @@ int proc_spawn(Proc *proc, bool in, bool out, bool err)
     status = libuv_proc_spawn((LibuvProc *)proc);
     break;
   case kProcTypePty:
-    status = pty_proc_spawn((PtyProc *)proc);
+    status = pty_proc_spawn((PtyProc *)proc, true);
     break;
   }
 

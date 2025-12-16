@@ -78,6 +78,7 @@ typedef void (*stream_close_cb)(Stream *stream, void *data);
 
 struct stream {
   bool closed;
+  bool did_eof;
   union {
     uv_pipe_t pipe;
     uv_tcp_t tcp;

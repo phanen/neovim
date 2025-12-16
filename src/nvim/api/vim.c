@@ -51,6 +51,7 @@
 #include "nvim/lua/executor.h"
 #include "nvim/lua/treesitter.h"
 #include "nvim/macros_defs.h"
+#include "nvim/main.h"
 #include "nvim/mapping.h"
 #include "nvim/mark.h"
 #include "nvim/mark_defs.h"
@@ -1107,46 +1108,67 @@ Integer nvim_open_term(Buffer buffer, Dict(open_term) *opts, Error *err)
     return 0;
   }
 
+  bool pty = api_object_to_bool(opts->pty, "pty", false, err);
+
   LuaRef cb = LUA_NOREF;
   if (HAS_KEY(opts, open_term, on_input)) {
-    cb = opts->on_input;
-    opts->on_input = LUA_NOREF;
+    LuaRef on_input = opts->on_input;
+    if (pty) {
+      /// TODO: allow this, can be good to have...
+      api_set_error(err, kErrorTypeException, "whaaa");
+      return 0;
+    }
+    cb = on_input;
+    on_input = LUA_NOREF;
   }
 
-  Channel *chan = channel_alloc(kChannelStreamInternal);
-  chan->stream.internal.cb = cb;
-  chan->stream.internal.closed = false;
-  TerminalOptions topts = {
-    .data = chan,
-    // NB: overridden in terminal_check_size if a window is already
-    // displaying the buffer
-    .width = (uint16_t)MAX(curwin->w_view_width - win_col_off(curwin), 0),
-    .height = (uint16_t)curwin->w_view_height,
-    .write_cb = term_write,
-    .resize_cb = term_resize,
-    .close_cb = term_close,
-    .force_crlf = GET_BOOL_OR_TRUE(opts, open_term, force_crlf),
-  };
+  // NB: overridden in terminal_check_size if a window is already displaying the buffer
+  uint16_t width = (uint16_t)MAX(curwin->w_view_width - win_col_off(curwin), 0);
+  uint16_t height = (uint16_t)curwin->w_view_height;
 
-  // Read existing buffer contents (if any)
-  StringBuilder contents = KV_INITIAL_VALUE;
-  read_buffer_into(buf, 1, buf->b_ml.ml_line_count, &contents);
+  Channel *chan = channel_alloc(pty ? kChannelStreamPty : kChannelStreamInternal);
+  if (pty) {
+    chan->stream.pty = pty_proc_init(&main_loop, chan, false);
+    chan->stream.pty.width = width;  /// TODO: is uze??
+    chan->stream.pty.height = height;
+    channel_pty_open(chan);
+    channel_terminal_open(buf, chan);
+    /// TODO: a bit fugly, can we make the pty be the right size immediately?
+    terminal_check_size(buf->terminal);
+    channel_create_event(chan, NULL);
+  } else {
+    chan->stream.internal.cb = cb;
+    chan->stream.internal.closed = false;
+    TerminalOptions topts = {
+      .data = chan,
+      // NB: overridden in terminal_check_size if a window is already
+      // displaying the buffer
+      .width = (uint16_t)MAX(curwin->w_view_width - win_col_off(curwin), 0),
+      .height = (uint16_t)curwin->w_view_height,
+      .write_cb = term_write,
+      .resize_cb = term_resize,
+      .close_cb = term_close,
+      .force_crlf = GET_BOOL_OR_TRUE(opts, open_term, force_crlf),
+    };
 
-  channel_incref(chan);
-  terminal_open(&chan->term, buf, topts);
-  if (chan->term != NULL) {
-    terminal_check_size(chan->term);
+    // Read existing buffer contents (if any)
+    StringBuilder contents = KV_INITIAL_VALUE;
+    read_buffer_into(buf, 1, buf->b_ml.ml_line_count, &contents);
+
+    channel_incref(chan);
+    terminal_open(&chan->term, buf, topts);
+    if (chan->term != NULL) {
+      terminal_check_size(chan->term);
+    }
+    channel_decref(chan);
+    // Write buffer contents to channel. channel_send takes ownership of the
+    // buffer so we do not need to free it.
+    if (contents.size > 0) {
+      const char *error = NULL;
+      channel_send(chan->id, contents.items, contents.size, true, &error);
+      VALIDATE(!error, "%s", error, {});
+    }
   }
-  channel_decref(chan);
-
-  // Write buffer contents to channel. channel_send takes ownership of the
-  // buffer so we do not need to free it.
-  if (contents.size > 0) {
-    const char *error = NULL;
-    channel_send(chan->id, contents.items, contents.size, true, &error);
-    VALIDATE(!error, "%s", error, {});
-  }
-
   return (Integer)chan->id;
 }
 

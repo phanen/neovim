@@ -163,8 +163,9 @@ pid_t vim_forkpty(int *amaster, char *name, struct termios *termp, struct winsiz
 # define forkpty vim_forkpty
 #endif
 
+/// @param process if true spawn procces, if false just open pty
 /// @returns zero on success, or negative error code
-int pty_proc_spawn(PtyProc *ptyproc)
+int pty_proc_spawn(PtyProc *pty, bool process)
   FUNC_ATTR_NONNULL_ALL
 {
   // termios initialized at first use
@@ -173,21 +174,33 @@ int pty_proc_spawn(PtyProc *ptyproc)
     init_termios(&termios_default);
   }
 
+  Proc *proc = &pty->proc;
   int status = 0;  // zero or negative error code (libuv convention)
-  Proc *proc = (Proc *)ptyproc;
   assert(proc->err.s.closed);
-  uv_signal_start(&proc->loop->children_watcher, chld_handler, SIGCHLD);
-  ptyproc->winsize = (struct winsize){ ptyproc->height, ptyproc->width, 0, 0 };
-  uv_disable_stdio_inheritance();
-  int master;
-  int pid = forkpty(&master, NULL, &termios_default, &ptyproc->winsize);
+  pty->winsize = (struct winsize){ pty->height, pty->width, 0, 0 };
 
-  if (pid < 0) {
-    status = -errno;
-    ELOG("forkpty failed: %s", strerror(errno));
-    return status;
-  } else if (pid == 0) {
-    init_child(ptyproc);  // never returns
+  int master, pid;
+  if (process) {
+    uv_signal_start(&proc->loop->children_watcher, chld_handler, SIGCHLD);
+    uv_disable_stdio_inheritance();
+    pid = forkpty(&master, NULL, &termios_default, &pty->winsize);
+
+    if (pid < 0) {
+      status = -errno;
+      ELOG("forkpty failed: %s", strerror(errno));
+      return status;
+    } else if (pid == 0) {
+      init_child(pty);  // never returns
+    }
+    proc->pid = pid;
+  } else {
+    int slave;
+    if (openpty(&master, &slave, NULL, &termios_default, &pty->winsize) == -1) {
+      status = -errno;
+      ELOG("openpty failed: %s", strerror(errno));
+      return status;
+    }
+    pty->slave_fd = slave;
   }
 
   // make sure the master file descriptor is non blocking
@@ -219,27 +232,28 @@ int pty_proc_spawn(PtyProc *ptyproc)
     goto error;
   }
 
-  ptyproc->tty_fd = master;
-  proc->pid = pid;
+  pty->master_fd = master;
   return 0;
 
 error:
   close(master);
-  kill(pid, SIGKILL);
-  waitpid(pid, NULL, 0);
+  if (process) {
+    kill(pid, SIGKILL);
+    waitpid(pid, NULL, 0);
+  }
   return status;
 }
 
 const char *pty_proc_tty_name(PtyProc *ptyproc)
 {
-  return ptsname(ptyproc->tty_fd);
+  return ptsname(ptyproc->master_fd);
 }
 
 void pty_proc_resize(PtyProc *ptyproc, uint16_t width, uint16_t height)
   FUNC_ATTR_NONNULL_ALL
 {
   ptyproc->winsize = (struct winsize){ height, width, 0, 0 };
-  ioctl(ptyproc->tty_fd, TIOCSWINSZ, &ptyproc->winsize);
+  ioctl(ptyproc->master_fd, TIOCSWINSZ, &ptyproc->winsize);
 }
 
 void pty_proc_close(PtyProc *ptyproc)
@@ -254,9 +268,9 @@ void pty_proc_close(PtyProc *ptyproc)
 
 void pty_proc_close_master(PtyProc *ptyproc) FUNC_ATTR_NONNULL_ALL
 {
-  if (ptyproc->tty_fd >= 0) {
-    close(ptyproc->tty_fd);
-    ptyproc->tty_fd = -1;
+  if (ptyproc->master_fd >= 0) {
+    close(ptyproc->master_fd);
+    ptyproc->master_fd = -1;
   }
 }
 
@@ -414,8 +428,10 @@ static void chld_handler(uv_signal_t *handle, int signum)
   }
 }
 
-PtyProc pty_proc_init(Loop *loop, void *data)
+PtyProc pty_proc_init(Loop *loop, void *data, bool process)
 {
+  /// TODO: if pty_process_win don't need this either
+  (void)process;
   PtyProc rv = { 0 };
   rv.proc = proc_init(loop, kProcTypePty, data);
   rv.width = 80;

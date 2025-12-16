@@ -434,10 +434,12 @@ cleanup:
   return rc;
 }
 
-PtyProc pty_proc_init(Loop *loop, void *data)
+PtyProc pty_proc_init(Loop *loop, void *data, bool process)
 {
   PtyProc rv;
-  rv.proc = proc_init(loop, kProcTypePty, data);
+  if (process) {
+    rv.proc = proc_init(loop, kProcTypePty, data);
+  }
   rv.width = 80;
   rv.height = 24;
   rv.conpty = NULL;

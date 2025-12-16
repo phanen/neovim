@@ -8,9 +8,8 @@
 #include "nvim/event/wstream.h"
 #include "nvim/macros_defs.h"
 #include "nvim/memory.h"
-#include "nvim/types_defs.h"
 
-#define DEFAULT_MAXMEM 1024 * 1024 * 2000
+#define WSTREAM_MAXMEM 1024 * 1024 * 2000
 
 typedef struct {
   Stream *stream;
@@ -19,25 +18,6 @@ typedef struct {
 } WRequest;
 
 #include "event/wstream.c.generated.h"
-
-void wstream_init_fd(Loop *loop, Stream *stream, int fd, size_t maxmem)
-  FUNC_ATTR_NONNULL_ARG(1) FUNC_ATTR_NONNULL_ARG(2)
-{
-  stream_init(loop, stream, fd, NULL);
-  wstream_init(stream, maxmem);
-}
-
-void wstream_init_stream(Stream *stream, uv_stream_t *uvstream, size_t maxmem)
-  FUNC_ATTR_NONNULL_ARG(1) FUNC_ATTR_NONNULL_ARG(2)
-{
-  stream_init(NULL, stream, -1, uvstream);
-  wstream_init(stream, maxmem);
-}
-
-void wstream_init(Stream *stream, size_t maxmem)
-{
-  stream->maxmem = maxmem ? maxmem : DEFAULT_MAXMEM;
-}
 
 /// Sets a callback that will be called on completion of a write request,
 /// indicating failure/success.
@@ -67,7 +47,6 @@ void wstream_set_write_cb(Stream *stream, stream_write_cb cb, void *data)
 bool wstream_write(Stream *stream, WBuffer *buffer)
   FUNC_ATTR_NONNULL_ALL
 {
-  assert(stream->maxmem);
   // This should not be called after a stream was freed
   assert(!stream->closed);
 
@@ -91,7 +70,7 @@ bool wstream_write(Stream *stream, WBuffer *buffer)
     return req.result > 0;
   }
 
-  if (stream->curmem > stream->maxmem) {
+  if (stream->curmem > WSTREAM_MAXMEM) {
     goto err;
   }
 
